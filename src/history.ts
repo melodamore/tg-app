@@ -1,4 +1,5 @@
 export type PixelDelta = {
+  layerId: string;
   chunkId: string;
   index: number;
   oldColor: number[];
@@ -19,21 +20,19 @@ export const HistoryManager = {
     this.modifiedInStroke.clear();
   },
 
-  record(chunkId: string, index: number, oldColor: number[], newColor: number[]) {
+  record(layerId: string, chunkId: string, index: number, oldColor: number[], newColor: number[]) {
     if (!this.isDrawing) return;
-
     if (oldColor[0] === newColor[0] && oldColor[1] === newColor[1] && oldColor[2] === newColor[2] && oldColor[3] === newColor[3]) return;
 
-    const pixelKey = `${chunkId}-${index}`;
-    
+    const pixelKey = `${layerId}-${chunkId}-${index}`;
     if (this.modifiedInStroke.has(pixelKey)) {
-      const existingDelta = this.currentStroke.find(d => d.chunkId === chunkId && d.index === index);
+      const existingDelta = this.currentStroke.find(d => d.layerId === layerId && d.chunkId === chunkId && d.index === index);
       if (existingDelta) existingDelta.newColor = newColor;
       return;
     }
 
     this.modifiedInStroke.add(pixelKey);
-    this.currentStroke.push({ chunkId, index, oldColor, newColor });
+    this.currentStroke.push({ layerId, chunkId, index, oldColor, newColor });
   },
 
   endStroke() {
@@ -67,4 +66,31 @@ export const HistoryManager = {
 export const LineManager = {
   startX: null as number | null,
   startY: null as number | null
+};
+
+// NEW: Handles Floating Pixel Selections
+export const SelectionManager = {
+  isSelecting: false,
+  isFloating: false,
+  startX: 0, startY: 0,
+  endX: 0, endY: 0,
+  offsetX: 0, offsetY: 0,
+  floatingPixels: [] as {x: number, y: number, color: number[]}[],
+
+  getBounds() {
+    return {
+      minX: Math.min(this.startX, this.endX),
+      maxX: Math.max(this.startX, this.endX),
+      minY: Math.min(this.startY, this.endY),
+      maxY: Math.max(this.startY, this.endY),
+    };
+  },
+  
+  clear() {
+     this.isSelecting = false;
+     this.isFloating = false;
+     this.floatingPixels = [];
+     this.offsetX = 0; 
+     this.offsetY = 0;
+  }
 };

@@ -1,7 +1,14 @@
-import { useMemo, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { ThreeEvent } from '@react-three/fiber';
-import { HistoryManager, LineManager, type PixelDelta } from './history';
+import { HistoryManager, LineManager, SelectionManager, type PixelDelta } from './history';
+
+export interface Layer {
+  id: string;
+  name: string;
+  visible: boolean;
+  opacity: number;
+}
 
 interface Props {
   color?: string;
@@ -9,6 +16,9 @@ interface Props {
   chunkSize?: number;
   activeTool?: string;
   symMode?: 'X' | 'Y' | 'XY';
+  shapeFill?: boolean;
+  layers: Layer[];
+  activeLayerId: string;
   onPickColor: (hex: string) => void;
 }
 
@@ -17,22 +27,78 @@ export default function PixelChunk({
   position = [0, 0, 0], 
   chunkSize = 64, 
   activeTool = 'pencil', 
-  symMode = 'X', 
+  symMode = 'X',
+  shapeFill = false,
+  layers,
+  activeLayerId,
   onPickColor 
 }: Props) {
   const chunkId = position.join(',');
-  const data = useMemo(() => new Uint8ClampedArray(chunkSize * chunkSize * 4).fill(255), [chunkSize]);
-  
-  const texture = useMemo(() => {
-    const tex = new THREE.DataTexture(data, chunkSize, chunkSize, THREE.RGBAFormat);
-    tex.magFilter = THREE.NearestFilter; 
-    tex.needsUpdate = true;
-    return tex;
-  }, [data, chunkSize]);
+  const [, setRenderTrigger] = useState(0);
+
+  const layerData = useRef<Record<string, { data: Uint8ClampedArray, tex: THREE.DataTexture }>>({});
+
+  useEffect(() => {
+    let changed = false;
+    layers.forEach(l => {
+      if (!layerData.current[l.id]) {
+        const data = new Uint8ClampedArray(chunkSize * chunkSize * 4); 
+        const tex = new THREE.DataTexture(data, chunkSize, chunkSize, THREE.RGBAFormat);
+        tex.magFilter = THREE.NearestFilter;
+        tex.needsUpdate = true;
+        layerData.current[l.id] = { data, tex };
+        changed = true;
+      }
+    });
+    if (changed) setRenderTrigger(v => v + 1);
+  }, [layers, chunkSize]);
+
+  // Project Save (.pxm) Serialization
+  useEffect(() => {
+    const onGather = () => {
+        const serializedLayers = layers.map(l => {
+           const arr = layerData.current[l.id]?.data;
+           if (!arr) return { id: l.id, data: '' };
+           const bin = [];
+           for (let i = 0; i < arr.length; i += 0x8000) {
+               bin.push(String.fromCharCode.apply(null, arr.subarray(i, i + 0x8000) as any));
+           }
+           return { id: l.id, data: btoa(bin.join('')) };
+        });
+        // @ts-ignore
+        window.projectExportBuffer.push({ chunkId, layers: serializedLayers });
+    };
+    window.addEventListener('gatherChunkData', onGather);
+    return () => window.removeEventListener('gatherChunkData', onGather);
+  }, [layers, chunkId]);
+
+  // Project Load (.pxm) Deserialization
+  useEffect(() => {
+    const onApply = () => {
+        // @ts-ignore
+        const myChunk = window.projectImportBuffer?.find(c => c.chunkId === chunkId);
+        if (myChunk) {
+            myChunk.layers.forEach((l: any) => {
+                if (layerData.current[l.id]) {
+                    const bin = atob(l.data);
+                    const arr = layerData.current[l.id].data;
+                    for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                    layerData.current[l.id].tex.needsUpdate = true;
+                }
+            });
+            setRenderTrigger(v => v+1);
+        }
+    };
+    window.addEventListener('applyChunkData', onApply);
+    return () => window.removeEventListener('applyChunkData', onApply);
+  }, [chunkId]);
 
   useEffect(() => {
     const handleGlobalDraw = (e: Event) => {
-      const { points, newColor } = (e as CustomEvent).detail;
+      const { points, newColor, targetLayer } = (e as CustomEvent).detail;
+      const targetData = layerData.current[targetLayer];
+      if (!targetData) return;
+
       let needsUpdate = false;
 
       points.forEach((pt: { x: number, y: number }) => {
@@ -46,52 +112,129 @@ export default function PixelChunk({
           const localY = Math.floor(pt.y - minY);
           const index = (localY * chunkSize + localX) * 4;
 
-          const oldColor = [data[index], data[index+1], data[index+2], data[index+3]];
-          HistoryManager.record(chunkId, index, oldColor, newColor);
+          const oldColor = [targetData.data[index], targetData.data[index+1], targetData.data[index+2], targetData.data[index+3]];
+          HistoryManager.record(targetLayer, chunkId, index, oldColor, newColor);
 
-          data[index] = newColor[0];
-          data[index+1] = newColor[1];
-          data[index+2] = newColor[2];
-          data[index+3] = newColor[3];
+          targetData.data[index] = newColor[0];
+          targetData.data[index+1] = newColor[1];
+          targetData.data[index+2] = newColor[2];
+          targetData.data[index+3] = newColor[3];
           needsUpdate = true;
         }
       });
 
-      if (needsUpdate) texture.needsUpdate = true;
+      if (needsUpdate) targetData.tex.needsUpdate = true;
     };
 
     window.addEventListener('globalDraw', handleGlobalDraw);
     return () => window.removeEventListener('globalDraw', handleGlobalDraw);
-  }, [position, chunkSize, data, texture, chunkId]);
+  }, [position, chunkSize, chunkId]);
+
+  // Handle Selection Extract & Commit
+  useEffect(() => {
+    const minCX = position[0] - chunkSize / 2;
+    const maxCX = position[0] + chunkSize / 2;
+    const minCY = position[1] - chunkSize / 2;
+    const maxCY = position[1] + chunkSize / 2;
+
+    const handleExtract = (e: Event) => {
+      const { targetLayer } = (e as CustomEvent).detail;
+      const targetData = layerData.current[targetLayer];
+      if (!targetData) return;
+
+      const b = SelectionManager.getBounds();
+      let needsUpdate = false;
+
+      const startX = Math.max(b.minX, minCX);
+      const endX = Math.min(b.maxX, maxCX - 1);
+      const startY = Math.max(b.minY, minCY);
+      const endY = Math.min(b.maxY, maxCY - 1);
+
+      for (let y = startY; y <= endY; y++) {
+        for (let x = startX; x <= endX; x++) {
+          const localX = Math.floor(x - minCX);
+          const localY = Math.floor(y - minCY);
+          const idx = (localY * chunkSize + localX) * 4;
+
+          if (targetData.data[idx+3] > 0) { // If pixel exists
+            SelectionManager.floatingPixels.push({
+               x, y, color: [targetData.data[idx], targetData.data[idx+1], targetData.data[idx+2], targetData.data[idx+3]]
+            });
+            HistoryManager.record(targetLayer, chunkId, idx, [targetData.data[idx], targetData.data[idx+1], targetData.data[idx+2], targetData.data[idx+3]], [0,0,0,0]);
+            targetData.data[idx] = 0; targetData.data[idx+1] = 0; targetData.data[idx+2] = 0; targetData.data[idx+3] = 0;
+            needsUpdate = true;
+          }
+        }
+      }
+      if (needsUpdate) targetData.tex.needsUpdate = true;
+    };
+
+    const handleCommit = (e: Event) => {
+      const { targetLayer } = (e as CustomEvent).detail;
+      const targetData = layerData.current[targetLayer];
+      if (!targetData || !SelectionManager.isFloating) return;
+
+      let needsUpdate = false;
+      SelectionManager.floatingPixels.forEach(p => {
+        const nx = p.x + SelectionManager.offsetX;
+        const ny = p.y + SelectionManager.offsetY;
+
+        if (nx >= minCX && nx < maxCX && ny >= minCY && ny < maxCY) {
+          const localX = Math.floor(nx - minCX);
+          const localY = Math.floor(ny - minCY);
+          const idx = (localY * chunkSize + localX) * 4;
+
+          const oldColor = [targetData.data[idx], targetData.data[idx+1], targetData.data[idx+2], targetData.data[idx+3]];
+          HistoryManager.record(targetLayer, chunkId, idx, oldColor, p.color);
+
+          targetData.data[idx] = p.color[0]; targetData.data[idx+1] = p.color[1]; targetData.data[idx+2] = p.color[2]; targetData.data[idx+3] = p.color[3];
+          needsUpdate = true;
+        }
+      });
+      if (needsUpdate) targetData.tex.needsUpdate = true;
+    };
+
+    window.addEventListener('extractSelection', handleExtract);
+    window.addEventListener('commitSelection', handleCommit);
+    return () => {
+      window.removeEventListener('extractSelection', handleExtract);
+      window.removeEventListener('commitSelection', handleCommit);
+    };
+  }, [position, chunkSize, chunkId]);
 
   useEffect(() => {
     const handleHistory = (e: Event) => {
       const { stroke, isUndo } = (e as CustomEvent).detail;
-      let needsUpdate = false;
+      const updatedLayers = new Set<string>();
 
       stroke.forEach((delta: PixelDelta) => {
         if (delta.chunkId !== chunkId) return;
+        const targetData = layerData.current[delta.layerId];
+        if (!targetData) return;
+
         const targetColor = isUndo ? delta.oldColor : delta.newColor;
-        data[delta.index] = targetColor[0];
-        data[delta.index + 1] = targetColor[1];
-        data[delta.index + 2] = targetColor[2];
-        data[delta.index + 3] = targetColor[3];
-        needsUpdate = true;
+        targetData.data[delta.index] = targetColor[0];
+        targetData.data[delta.index + 1] = targetColor[1];
+        targetData.data[delta.index + 2] = targetColor[2];
+        targetData.data[delta.index + 3] = targetColor[3];
+        updatedLayers.add(delta.layerId);
       });
 
-      if (needsUpdate) texture.needsUpdate = true;
+      updatedLayers.forEach(id => {
+        if (layerData.current[id]) layerData.current[id].tex.needsUpdate = true;
+      });
     };
 
     window.addEventListener('historyApply', handleHistory);
     return () => window.removeEventListener('historyApply', handleHistory);
-  }, [chunkId, data, texture]);
+  }, [chunkId]);
 
   const hexToRgb = (hex: string) => {
     const bigint = parseInt(hex.slice(1), 16);
     return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
   };
 
-  const getPixel = (x: number, y: number) => {
+  const getPixel = (data: Uint8ClampedArray, x: number, y: number) => {
     const idx = (y * chunkSize + x) * 4;
     return [data[idx], data[idx+1], data[idx+2], data[idx+3]];
   };
@@ -100,9 +243,12 @@ export default function PixelChunk({
     return c1[0] === c2[0] && c1[1] === c2[1] && c1[2] === c2[2] && c1[3] === c2[3];
   };
 
-  const floodFill = (startX: number, startY: number, fillRgb: number[]) => {
-    const targetColor = getPixel(startX, startY);
-    const newColor = [...fillRgb, 255];
+  const floodFill = (startX: number, startY: number, fillRgb: number[], targetLayer: string) => {
+    const target = layerData.current[targetLayer];
+    if (!target) return;
+
+    const targetColor = getPixel(target.data, startX, startY);
+    const newColor = [...fillRgb, 255]; 
     if (colorsMatch(targetColor, newColor)) return;
 
     HistoryManager.startStroke();
@@ -113,14 +259,14 @@ export default function PixelChunk({
       const cx = stack.pop()!;
       const idx = (cy * chunkSize + cx) * 4;
       
-      const currentColor = [data[idx], data[idx+1], data[idx+2], data[idx+3]];
+      const currentColor = [target.data[idx], target.data[idx+1], target.data[idx+2], target.data[idx+3]];
 
       if (colorsMatch(currentColor, targetColor)) {
-        HistoryManager.record(chunkId, idx, currentColor, newColor);
-        data[idx] = newColor[0];
-        data[idx+1] = newColor[1];
-        data[idx+2] = newColor[2];
-        data[idx+3] = newColor[3];
+        HistoryManager.record(targetLayer, chunkId, idx, currentColor, newColor);
+        target.data[idx] = newColor[0];
+        target.data[idx+1] = newColor[1];
+        target.data[idx+2] = newColor[2];
+        target.data[idx+3] = newColor[3];
 
         if (cx > 0) stack.push(cx - 1, cy);
         if (cx < chunkSize - 1) stack.push(cx + 1, cy);
@@ -129,17 +275,14 @@ export default function PixelChunk({
       }
     }
     HistoryManager.endStroke();
-    texture.needsUpdate = true;
+    target.tex.needsUpdate = true;
   };
 
   const getBresenhamPoints = (x0: number, y0: number, x1: number, y1: number) => {
     const points = [];
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = (x0 < x1) ? 1 : -1;
-    const sy = (y0 < y1) ? 1 : -1;
+    const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    const sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1;
     let err = dx - dy;
-
     while (true) {
       points.push({ x: x0, y: y0 });
       if (x0 === x1 && y0 === y1) break;
@@ -150,82 +293,304 @@ export default function PixelChunk({
     return points;
   };
 
+  const getPolygonPoints = (vertices: {x: number, y: number}[], filled: boolean) => {
+    const points: {x: number, y: number}[] = [];
+    for (let i = 0; i < vertices.length; i++) {
+        const p1 = vertices[i];
+        const p2 = vertices[(i + 1) % vertices.length];
+        points.push(...getBresenhamPoints(p1.x, p1.y, p2.x, p2.y));
+    }
+    if (filled) {
+        let minY = Math.min(...vertices.map(v => v.y));
+        let maxY = Math.max(...vertices.map(v => v.y));
+        for (let y = minY; y <= maxY; y++) {
+            let nodes = [];
+            let j = vertices.length - 1;
+            for (let i = 0; i < vertices.length; i++) {
+                let vi = vertices[i], vj = vertices[j];
+                if ((vi.y < y && vj.y >= y) || (vj.y < y && vi.y >= y)) {
+                    nodes.push(Math.floor(vi.x + (y - vi.y) / (vj.y - vi.y) * (vj.x - vi.x)));
+                }
+                j = i;
+            }
+            nodes.sort((a, b) => a - b);
+            for (let i = 0; i < nodes.length; i += 2) {
+                if (nodes[i+1] !== undefined) {
+                    for (let x = nodes[i]; x <= nodes[i+1]; x++) points.push({x, y});
+                }
+            }
+        }
+    }
+    return points;
+  };
+
+  const getCirclePoints = (xc: number, yc: number, x1: number, y1: number, filled: boolean) => {
+    const r = Math.floor(Math.hypot(x1 - xc, y1 - yc));
+    const points = [];
+    if (r === 0) return [{x: xc, y: yc}];
+    if (filled) {
+        for (let y = -r; y <= r; y++) {
+            for (let x = -r; x <= r; x++) {
+                if (x*x + y*y <= r*r) points.push({x: xc + x, y: yc + y});
+            }
+        }
+    } else {
+        let x = 0, y = r, d = r - 1;
+        while (y >= x) {
+            points.push(
+                {x: xc+x, y: yc+y}, {x: xc-x, y: yc+y}, {x: xc+x, y: yc-y}, {x: xc-x, y: yc-y},
+                {x: xc+y, y: yc+x}, {x: xc-y, y: yc+x}, {x: xc+y, y: yc-x}, {x: xc-y, y: yc-x}
+            );
+            if (d >= 2 * x) { d -= 2 * x + 1; x++; }
+            else if (d < 2 * (r - y)) { d += 2 * y - 1; y--; }
+            else { d += 2 * (y - x - 1); y--; x++; }
+        }
+    }
+    return points;
+  };
+
+  const getShapeVertices = (tool: string, x0: number, y0: number, x1: number, y1: number) => {
+      const cx = Math.floor((x0 + x1) / 2);
+      const cy = Math.floor((y0 + y1) / 2);
+      const rx = Math.abs(x1 - x0) / 2;
+      const ry = Math.abs(y1 - y0) / 2;
+
+      const getRegularPolygon = (sides: number, rotation = -Math.PI/2) => {
+          const v = [];
+          for (let i = 0; i < sides; i++) {
+              const angle = rotation + (i * 2 * Math.PI / sides);
+              v.push({ x: Math.floor(cx + rx * Math.cos(angle)), y: Math.floor(cy + ry * Math.sin(angle)) });
+          }
+          return v;
+      };
+
+      const minX = Math.min(x0, x1), maxX = Math.max(x0, x1);
+      const minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+
+      switch (tool) {
+          case 'rect': return [{x: minX, y: minY}, {x: maxX, y: minY}, {x: maxX, y: maxY}, {x: minX, y: maxY}];
+          case 'triangle': return [{x: cx, y: minY}, {x: maxX, y: maxY}, {x: minX, y: maxY}];
+          case 'diamond': return [{x: cx, y: minY}, {x: maxX, y: cy}, {x: cx, y: maxY}, {x: minX, y: cy}];
+          case 'pentagon': return getRegularPolygon(5);
+          case 'hexagon': return getRegularPolygon(6);
+          case 'octagon': return getRegularPolygon(8, -Math.PI/2 + Math.PI/8);
+          case 'parallelogram': {
+              const offset = Math.floor(rx * 0.5);
+              return [{x: minX + offset, y: minY}, {x: maxX, y: minY}, {x: maxX - offset, y: maxY}, {x: minX, y: maxY}];
+          }
+          case 'arrow': return [
+              {x: minX, y: Math.floor(cy - ry/2)}, {x: cx, y: Math.floor(cy - ry/2)}, {x: cx, y: minY},
+              {x: maxX, y: cy}, {x: cx, y: maxY}, {x: cx, y: Math.floor(cy + ry/2)}, {x: minX, y: Math.floor(cy + ry/2)}
+          ];
+          case 'star': {
+              const v = [];
+              for (let i = 0; i < 10; i++) {
+                  const angle = -Math.PI/2 + (i * Math.PI / 5);
+                  const rRatio = i % 2 === 0 ? 1 : 0.4;
+                  v.push({ x: Math.floor(cx + rx * rRatio * Math.cos(angle)), y: Math.floor(cy + ry * rRatio * Math.sin(angle)) });
+              }
+              return v;
+          }
+          default: return [];
+      }
+  };
+
   const draw = (e: ThreeEvent<PointerEvent>) => {
     if (e.pointerType === 'touch' && !e.isPrimary) return;
     e.stopPropagation(); 
     if (!e.uv) return;
 
-    if (activeTool === 'line') {
+    const px = Math.floor(e.point.x);
+    const py = Math.floor(e.point.y);
+
+    // --- TEXT TOOL LOGIC ---
+    if (activeTool === 'text') {
+        if (e.type === 'pointerdown') {
+            const text = prompt("Enter text to stamp:");
+            if (!text) return;
+            const c = document.createElement('canvas');
+            const ctx = c.getContext('2d')!;
+            ctx.font = '12px monospace';
+            const w = Math.max(1, Math.ceil(ctx.measureText(text).width));
+            c.width = w; c.height = 16;
+            ctx.font = '12px monospace';
+            ctx.fillStyle = 'black';
+            ctx.textBaseline = 'top';
+            ctx.fillText(text, 0, 2);
+            const data = ctx.getImageData(0,0,w,16).data;
+            const points = [];
+            for(let pyLocal=0; pyLocal<16; pyLocal++){
+                for(let pxLocal=0; pxLocal<w; pxLocal++){
+                    if (data[(pyLocal*w+pxLocal)*4+3] > 128) {
+                        points.push({x: px + pxLocal, y: py - pyLocal}); 
+                    }
+                }
+            }
+            HistoryManager.startStroke();
+            window.dispatchEvent(new CustomEvent('globalDraw', { detail: { points, newColor: [...hexToRgb(color), 255], targetLayer: activeLayerId } }));
+            HistoryManager.endStroke();
+        }
+        return;
+    }
+
+    // --- SELECT TOOL LOGIC ---
+    if (activeTool === 'select') {
+      if (e.type === 'pointerdown') {
+         (e.target as HTMLElement).setPointerCapture(e.pointerId);
+         if (SelectionManager.isFloating) {
+             const b = SelectionManager.getBounds();
+             if (px >= b.minX + SelectionManager.offsetX && px <= b.maxX + SelectionManager.offsetX &&
+                 py >= b.minY + SelectionManager.offsetY && py <= b.maxY + SelectionManager.offsetY) {
+                 LineManager.startX = px;
+                 LineManager.startY = py;
+             } else {
+                 window.dispatchEvent(new CustomEvent('commitSelection', { detail: { targetLayer: activeLayerId } }));
+                 HistoryManager.endStroke();
+                 SelectionManager.clear();
+                 window.dispatchEvent(new CustomEvent('selectionUpdate'));
+             }
+         } else {
+             SelectionManager.isSelecting = true;
+             SelectionManager.startX = px; SelectionManager.startY = py;
+             SelectionManager.endX = px; SelectionManager.endY = py;
+             window.dispatchEvent(new CustomEvent('selectionUpdate'));
+         }
+      } else if (e.type === 'pointermove') {
+          if (SelectionManager.isSelecting) {
+             SelectionManager.endX = px; SelectionManager.endY = py;
+             window.dispatchEvent(new CustomEvent('selectionUpdate'));
+          } else if (SelectionManager.isFloating && LineManager.startX !== null && LineManager.startY !== null) {
+             SelectionManager.offsetX += px - LineManager.startX;
+             SelectionManager.offsetY += py - LineManager.startY;
+             LineManager.startX = px; LineManager.startY = py;
+             window.dispatchEvent(new CustomEvent('selectionUpdate'));
+          }
+      } else if (e.type === 'pointerup') {
+         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+         if (SelectionManager.isSelecting) {
+             SelectionManager.isSelecting = false;
+             if (SelectionManager.startX !== SelectionManager.endX || SelectionManager.startY !== SelectionManager.endY) {
+                 SelectionManager.isFloating = true;
+                 HistoryManager.startStroke();
+                 window.dispatchEvent(new CustomEvent('extractSelection', { detail: { targetLayer: activeLayerId } }));
+             }
+             window.dispatchEvent(new CustomEvent('selectionUpdate'));
+         } else if (LineManager.startX !== null) {
+             LineManager.startX = null;
+         }
+      }
+      return;
+    }
+
+    // --- SHAPE TOOL LOGIC ---
+    const SHAPE_TOOLS = ['line', 'rect', 'circle', 'triangle', 'diamond', 'pentagon', 'hexagon', 'octagon', 'star', 'arrow', 'parallelogram'];
+
+    if (SHAPE_TOOLS.includes(activeTool!)) {
       if (e.type === 'pointerdown') {
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
-        LineManager.startX = Math.floor(e.point.x);
-        LineManager.startY = Math.floor(e.point.y);
+        LineManager.startX = px;
+        LineManager.startY = py;
       } else if (e.type === 'pointermove' && LineManager.startX !== null && LineManager.startY !== null) {
-        const endX = Math.floor(e.point.x);
-        const endY = Math.floor(e.point.y);
-        const points = getBresenhamPoints(LineManager.startX, LineManager.startY, endX, endY);
-        
-        window.dispatchEvent(new CustomEvent('linePreview', { 
-          detail: { visible: true, points, color } 
-        }));
+        let points: any[] = [];
+        if (activeTool === 'line') points = getBresenhamPoints(LineManager.startX, LineManager.startY, px, py);
+        else if (activeTool === 'circle') points = getCirclePoints(LineManager.startX, LineManager.startY, px, py, shapeFill);
+        else {
+            const vertices = getShapeVertices(activeTool!, LineManager.startX, LineManager.startY, px, py);
+            points = getPolygonPoints(vertices, shapeFill);
+        }
+        window.dispatchEvent(new CustomEvent('shapePreview', { detail: { visible: true, points, color } }));
       } else if (e.type === 'pointerup' && LineManager.startX !== null && LineManager.startY !== null) {
         (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-        const endX = Math.floor(e.point.x);
-        const endY = Math.floor(e.point.y);
-        const points = getBresenhamPoints(LineManager.startX, LineManager.startY, endX, endY);
-        
+        let points: any[] = [];
+        if (activeTool === 'line') points = getBresenhamPoints(LineManager.startX, LineManager.startY, px, py);
+        else if (activeTool === 'circle') points = getCirclePoints(LineManager.startX, LineManager.startY, px, py, shapeFill);
+        else {
+            const vertices = getShapeVertices(activeTool!, LineManager.startX, LineManager.startY, px, py);
+            points = getPolygonPoints(vertices, shapeFill);
+        }
         LineManager.startX = null;
         LineManager.startY = null;
-
-        window.dispatchEvent(new CustomEvent('linePreview', { detail: { visible: false } }));
+        window.dispatchEvent(new CustomEvent('shapePreview', { detail: { visible: false } }));
 
         HistoryManager.startStroke();
         window.dispatchEvent(new CustomEvent('globalDraw', { 
-          detail: { points, newColor: [...hexToRgb(color), 255] } 
+          detail: { points, newColor: [...hexToRgb(color), 255], targetLayer: activeLayerId } 
         }));
         HistoryManager.endStroke();
       }
       return;
     }
 
+    // --- DEFAULT DRAW LOGIC ---
     if (e.type === 'pointerdown') HistoryManager.startStroke();
 
     const x = Math.floor(e.uv.x * chunkSize);
     const y = Math.floor(e.uv.y * chunkSize);
-    const index = (y * chunkSize + x) * 4;
 
     if (activeTool === 'eyedropper') {
-      const hex = "#" + (1 << 24 | data[index] << 16 | data[index+1] << 8 | data[index+2]).toString(16).slice(1);
-      onPickColor(hex);
+      for (let i = layers.length - 1; i >= 0; i--) {
+        const layer = layers[i];
+        if (!layer.visible) continue;
+        const targetData = layerData.current[layer.id];
+        if (targetData) {
+           const index = (y * chunkSize + x) * 4;
+           if (targetData.data[index+3] > 0) { 
+              const hex = "#" + (1 << 24 | targetData.data[index] << 16 | targetData.data[index+1] << 8 | targetData.data[index+2]).toString(16).slice(1);
+              onPickColor(hex);
+              return;
+           }
+        }
+      }
+      onPickColor('#FFFFFF'); 
       return;
     }
 
     if (activeTool === 'bucket' && e.type === 'pointerdown') {
-      floodFill(x, y, hexToRgb(color));
+      floodFill(x, y, hexToRgb(color), activeLayerId);
       return;
     }
 
-    const newColor = activeTool === 'eraser' ? [255, 255, 255, 255] : [...hexToRgb(color), 255];
-    const points = [{ x: Math.floor(e.point.x), y: Math.floor(e.point.y) }];
+    const newColor = activeTool === 'eraser' ? [0, 0, 0, 0] : [...hexToRgb(color), 255];
+    const points = [{ x: px, y: py }];
 
     if (activeTool === 'symmetry') {
-      if (symMode === 'X' || symMode === 'XY') points.push({ x: Math.floor(-e.point.x - 1), y: Math.floor(e.point.y) });
-      if (symMode === 'Y' || symMode === 'XY') points.push({ x: Math.floor(e.point.x), y: Math.floor(-e.point.y - 1) });
-      if (symMode === 'XY') points.push({ x: Math.floor(-e.point.x - 1), y: Math.floor(-e.point.y - 1) });
+      if (symMode === 'X' || symMode === 'XY') points.push({ x: -px - 1, y: py });
+      if (symMode === 'Y' || symMode === 'XY') points.push({ x: px, y: -py - 1 });
+      if (symMode === 'XY') points.push({ x: -px - 1, y: -py - 1 });
     }
 
-    window.dispatchEvent(new CustomEvent('globalDraw', { detail: { points, newColor } }));
+    if (activeTool !== 'select') {
+       window.dispatchEvent(new CustomEvent('globalDraw', { detail: { points, newColor, targetLayer: activeLayerId } }));
+    }
   };
 
   return (
-    <mesh 
-      position={position} 
-      onPointerDown={draw} 
-      onPointerMove={(e) => (e.buttons === 1 || e.pressure > 0) && draw(e)}
-      onPointerUp={draw}
-    >
-      <planeGeometry args={[chunkSize, chunkSize]} />
-      <meshBasicMaterial map={texture} side={THREE.DoubleSide} transparent />
-    </mesh>
+    <group position={position}>
+      {layers.map((layer, index) => {
+        if (!layer.visible || !layerData.current[layer.id]) return null;
+        return (
+          <mesh key={layer.id} position={[0, 0, index * 0.01]}>
+            <planeGeometry args={[chunkSize, chunkSize]} />
+            <meshBasicMaterial 
+              map={layerData.current[layer.id].tex} 
+              transparent 
+              opacity={layer.opacity} 
+              depthWrite={false} 
+              depthTest={false} 
+            />
+          </mesh>
+        );
+      })}
+
+      <mesh 
+        position={[0, 0, layers.length * 0.01 + 0.01]} 
+        onPointerDown={draw} 
+        onPointerMove={(e) => (e.buttons === 1 || e.pressure > 0) && draw(e)}
+        onPointerUp={draw}
+      >
+        <planeGeometry args={[chunkSize, chunkSize]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} depthTest={false} />
+      </mesh>
+    </group>
   );
 }
