@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import WebApp from '@twa-dev/sdk';
-import { Pencil, PaintBucket, Pipette, Eraser, Ruler, FlipHorizontal, Undo, Redo, Trash, Layers as LayersIcon, Maximize, Download, Eye, EyeOff, Plus, Circle, Square, MousePointer2, Triangle, Pentagon, Hexagon, Octagon, Star, ArrowRight, Diamond, RectangleHorizontal, Copy, Scissors, ClipboardPaste, Trash2, CopyPlus, FlipVertical, RotateCw, RotateCcw, Check, Type, Save, FolderOpen, Palette, Image as ImageIcon, ChevronDown, X } from 'lucide-react';
+import { Pencil, PaintBucket, Pipette, Eraser, Ruler, FlipHorizontal, Undo, Redo, Trash, Layers as LayersIcon, Download, Eye, EyeOff, Plus, Circle, Square, MousePointer2, Triangle, Pentagon, Hexagon, Octagon, Star, ArrowRight, Diamond, RectangleHorizontal, Copy, Scissors, ClipboardPaste, Trash2, CopyPlus, FlipVertical, RotateCw, RotateCcw, Check, Type, Save, FolderOpen, Palette, Image as ImageIcon, ChevronDown, X } from 'lucide-react';
 import PixelChunk, { type Layer } from './PixelChunk';
 import { HistoryManager, SelectionManager } from './history';
 
@@ -208,18 +208,19 @@ function ExportManager({ canvasSize }: { canvasSize: number }) {
       finalCanvas.toBlob(async (blob) => {
         if (!blob) return;
         const fileName = `${filename}.png`;
+        const isTMA = WebApp.platform !== 'unknown';
         
-        // Native Share Fallback for Telegram / Mobile Webviews
-        try {
-            if (navigator.share) {
+        // Smart Download: Prefer native share in Telegram Mobile Webview
+        if (isTMA && navigator.share) {
+            try {
                 const file = new File([blob], fileName, { type: 'image/png' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({ files: [file], title: fileName });
                     return;
                 }
+            } catch (e) {
+                console.warn("Share API failed", e);
             }
-        } catch (e) {
-            console.warn("Share API failed", e);
         }
 
         // Standard Web Download Fallback
@@ -465,18 +466,19 @@ export default function App() {
         const projectData = { canvasSize, chunks: window.projectExportBuffer };
         const blob = new Blob([JSON.stringify(projectData)], { type: "application/json" });
         const fileName = `${name}.pxm`;
+        const isTMA = WebApp.platform !== 'unknown';
         
-        try {
-            if (navigator.share) {
+        if (isTMA && navigator.share) {
+            try {
                 const file = new File([blob], fileName, { type: 'application/json' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({ files: [file], title: fileName });
                     announce('Project saved successfully');
                     return;
                 }
+            } catch (e) {
+                console.warn("Share API failed", e);
             }
-        } catch (e) {
-            console.warn("Share API failed", e);
         }
 
         const link = document.createElement('a');
