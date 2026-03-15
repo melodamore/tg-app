@@ -12,7 +12,7 @@ import { hexToRgbArr } from './utils/colors';
 
 import { BottomNav } from './components/ui/BottomNav';
 import { Toast } from './components/ui/Toast';
-import { ConfirmModal, SaveModal } from './components/ui/Modals';
+import { ConfirmModal, SaveModal, OnboardingModal } from './components/ui/Modals';
 import { ColorPicker } from './components/ui/ColorPicker';
 import { TopHUD, FloatingMenu, BottomHUD } from './components/editor/Toolbar';
 import { LayersPanel, PalettePanel } from './components/editor/LayersPanel';
@@ -30,6 +30,7 @@ import { StudioView } from './views/StudioView';
 let clipboardPixels: {x: number, y: number, color: number[]}[] = [];
 
 export default function App() {
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const [appTab, setAppTab] = useState<'home'|'curate'|'studio'|'game'|'profile'>('home');
   
   // Studio State
@@ -441,6 +442,16 @@ export default function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', backgroundColor: '#0A0A0C', color: '#fff', touchAction: 'none', position: 'relative', overflow: 'hidden', fontFamily: 'system-ui' }} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
       
+      <OnboardingModal 
+        isOpen={showOnboarding} 
+        onComplete={(userData) => {
+           console.log("User Setup Complete:", userData);
+           setShowOnboarding(false);
+           // You can also emit an event or save this data to context/localStorage here
+           announce(`Welcome, ${userData.name}!`);
+        }} 
+      />
+
       <Toast toasts={toasts} />
       <ConfirmModal modal={confirmModal} onClose={() => setConfirmModal(null)} />
       <SaveModal modal={saveModal} saveName={saveName} setSaveName={setSaveName} onClose={() => setSaveModal(null)} onSave={(name) => saveModal?.type === 'project' ? executeSaveProject(name) : executeExportImage(name)} />
