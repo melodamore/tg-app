@@ -10,14 +10,14 @@ interface ConfirmModalProps {
 export function ConfirmModal({ modal, onClose }: ConfirmModalProps) {
     if (!modal) return null;
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#1A1A24', border: '1px solid #333', borderRadius: '16px', padding: '24px', width: '300px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
-                <Trash2 size={32} color="#ff4444" style={{ margin: '0 auto 12px' }} />
-                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>{modal.title}</h3>
-                <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#aaa' }}>{modal.text}</p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                    <button onClick={onClose} style={{ background: 'transparent', border: '1px solid #555', color: '#fff', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
-                    <button onClick={() => { modal.onConfirm(); onClose(); }} style={{ background: '#ff4444', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Delete</button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#18181B', borderRadius: '24px', padding: '32px 24px', width: '100%', maxWidth: '300px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+                <Trash2 size={28} color="#EF4444" style={{ margin: '0 auto 16px' }} />
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 600 }}>{modal.title}</h3>
+                <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#A1A1AA', lineHeight: '1.4' }}>{modal.text}</p>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                    <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: 'none', color: '#A1A1AA', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                    <button onClick={() => { modal.onConfirm(); onClose(); }} style={{ flex: 1, background: '#EF4444', border: 'none', color: '#FFF', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
                 </div>
             </div>
         </div>
@@ -37,13 +37,13 @@ export function SaveModal({ modal, saveName, setSaveName, onClose, onSave }: Sav
 
     if (modal.fallbackUrl) {
         return (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: '#1A1A24', border: '1px solid #333', borderRadius: '16px', padding: '24px', width: '300px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
-                    <h3 style={{ margin: '0 0 16px 0', fontSize: '18px' }}>Open in Browser to Download</h3>
-                    <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#aaa' }}>Saving files directly is restricted in Telegram Mini Apps on some devices. Please open the link in your browser to download.</p>
-                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                        <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: '1px solid #555', color: '#fff', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Close</button>
-                        <button onClick={() => { WebApp.openLink(modal.fallbackUrl!); onClose(); }} style={{ flex: 1, background: '#00FFCC', border: 'none', color: '#000', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Open Link</button>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#18181B', borderRadius: '24px', padding: '32px 24px', width: '100%', maxWidth: '300px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: 600 }}>Manual Download</h3>
+                    <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#A1A1AA', lineHeight: '1.4' }}>Direct saving is restricted here. Please open the link in your browser to download.</p>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: 'none', color: '#A1A1AA', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>Close</button>
+                        <button onClick={() => { WebApp.openLink(modal.fallbackUrl!); onClose(); }} style={{ flex: 1, background: '#00FFCC', border: 'none', color: '#000', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>Open Link</button>
                     </div>
                 </div>
             </div>
@@ -51,13 +51,13 @@ export function SaveModal({ modal, saveName, setSaveName, onClose, onSave }: Sav
     }
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ background: '#1A1A24', border: '1px solid #333', borderRadius: '16px', padding: '24px', width: '300px', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', textAlign: 'center' }}>{modal.type === 'project' ? 'Save Project' : 'Export Image'}</h3>
-                <input autoFocus type="text" value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="File name..." style={{ width: '100%', boxSizing: 'border-box', background: '#0A0A0C', border: '1px solid #444', color: '#fff', padding: '12px', borderRadius: '8px', marginBottom: '20px', outline: 'none' }} />
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                    <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: '1px solid #555', color: '#fff', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Cancel</button>
-                    <button onClick={() => { if (!saveName.trim()) return; onSave(saveName); }} style={{ flex: 1, background: '#00FFCC', border: 'none', color: '#000', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>{modal.type === 'project' ? 'Save' : 'Export'}</button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: '#18181B', borderRadius: '24px', padding: '32px 24px', width: '100%', maxWidth: '300px', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', textAlign: 'center', fontWeight: 600 }}>{modal.type === 'project' ? 'Save Project' : 'Export Image'}</h3>
+                <input autoFocus type="text" value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="File name..." style={{ width: '100%', boxSizing: 'border-box', background: '#27272A', border: 'none', color: '#FFF', padding: '16px', borderRadius: '12px', marginBottom: '24px', outline: 'none', fontSize: '15px' }} />
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                    <button onClick={onClose} style={{ flex: 1, background: 'transparent', border: 'none', color: '#A1A1AA', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                    <button onClick={() => { if (!saveName.trim()) return; onSave(saveName); }} style={{ flex: 1, background: '#00FFCC', border: 'none', color: '#000', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600 }}>{modal.type === 'project' ? 'Save' : 'Export'}</button>
                 </div>
             </div>
         </div>
@@ -84,7 +84,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
 
     if (!isOpen) return null;
 
-    const inputStyle = { width: '100%', boxSizing: 'border-box' as const, background: '#0A0A0C', border: '1px solid #444', color: '#fff', padding: '12px', borderRadius: '8px', margin: '15px 0', outline: 'none' };
+    const inputStyle = { width: '100%', boxSizing: 'border-box' as const, background: '#27272A', border: 'none', color: '#FFF', padding: '16px', borderRadius: '12px', margin: '20px 0', outline: 'none', fontSize: '15px' };
     
     const nextStep = () => setStep(s => s + 1);
     const prevStep = () => setStep(s => s - 1);
@@ -95,78 +95,99 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
         }
     };
 
+    // Array of different images to display above the modal depending on the active step
+    const stepImages = [
+        "https://i.ibb.co/39yh5dts/5886499923715362062.jpg", // Step 1: Welcome
+        "https://i.ibb.co/fdgxq4RB/unnamed.jpg", // Step 2: Name
+        "https://api.dicebear.com/7.x/bottts/svg?seed=username&backgroundColor=18181B", // Step 3: Username
+        "https://api.dicebear.com/7.x/bottts/svg?seed=id&backgroundColor=18181B"  // Step 4: ID
+    ];
+
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'relative', background: '#1A1A24', border: '1px solid #333', borderRadius: '16px', padding: '24px', width: '320px', textAlign: 'center', marginTop: step === 1 ? '180px' : '0', transition: 'margin 0.3s' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ 
+                position: 'relative', 
+                background: '#18181B', 
+                borderRadius: '24px', 
+                padding: step < 5 ? '96px 24px 24px' : '32px 24px 24px', 
+                width: '100%', 
+                maxWidth: '320px', 
+                textAlign: 'center', 
+                marginTop: step < 5 ? '60px' : '0', 
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4)' 
+            }}>
+                
+                {/* Minimalist flat offset avatar - changes dynamically based on current step */}
+                {step < 5 && (
+                    <div style={{ position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)' }}>
+                        <img src={stepImages[step - 1]} alt={`Guide for step ${step}`} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '20px', display: 'block', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', background: '#27272A' }} />
+                    </div>
+                )}
                 
                 {step === 1 && (
                     <>
-                        <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', paddingBottom: '15px' }}>
-                            <div style={{ background: '#222', padding: '6px', borderRadius: '16px', boxShadow: '0 15px 35px rgba(0,0,0,0.8), 0 -10px 30px rgba(0,255,204,0.15)', transform: 'perspective(600px) rotateX(5deg)', transformOrigin: 'bottom', border: '1px solid #444' }}>
-                                <img src="https://i.ibb.co/39yh5dts/5886499923715362062.jpg" alt="Guide" style={{ width: '180px', height: '180px', objectFit: 'cover', borderRadius: '10px', display: 'block', border: '2px solid #00FFCC' }} />
-                            </div>
-                        </div>
-                        <h2 style={{ margin: '0 0 10px 0', color: '#00FFCC' }}>Welcome to PixelMint!</h2>
-                        <p style={{ fontSize: '13px', color: '#aaa', marginBottom: '20px' }}>I'll be your guide. Let's set up your creator profile to get started.</p>
-                        <button onClick={nextStep} style={{ width: '100%', background: '#00FFCC', color: '#000', padding: '12px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Let's Go!</button>
+                        <h2 style={{ margin: '0 0 8px 0', color: '#FFF', fontSize: '22px', fontWeight: 600 }}>PixelMint</h2>
+                        <p style={{ fontSize: '14px', color: '#A1A1AA', marginBottom: '32px', lineHeight: '1.5' }}>I'll be your guide. Let's set up your creator profile to get started.</p>
+                        <button onClick={nextStep} style={{ width: '100%', background: '#00FFCC', color: '#000', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '15px' }}>Let's Go</button>
                     </>
                 )}
 
                 {step === 2 && (
                     <>
-                        <h3 style={{ margin: 0 }}>What's your name?</h3>
-                        <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Enter your name" style={inputStyle} />
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                            <button onClick={prevStep} style={{ flex: 1, background: '#333', color: '#fff', padding: '10px', borderRadius: '8px', border: 'none' }}>Back</button>
-                            <button onClick={nextStep} disabled={!name} style={{ flex: 1, background: name ? '#00FFCC' : '#444', color: '#000', padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>Next</button>
+                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>What's your name?</h3>
+                        <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Display name" style={inputStyle} />
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <button onClick={prevStep} style={{ flex: 1, background: 'transparent', color: '#A1A1AA', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Back</button>
+                            <button onClick={nextStep} disabled={!name} style={{ flex: 1, background: name ? '#00FFCC' : '#27272A', color: name ? '#000' : '#71717A', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Next</button>
                         </div>
                     </>
                 )}
 
                 {step === 3 && (
                     <>
-                        <h3 style={{ margin: 0 }}>Choose a Username</h3>
-                        <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" style={inputStyle} />
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                            <button onClick={prevStep} style={{ flex: 1, background: '#333', color: '#fff', padding: '10px', borderRadius: '8px', border: 'none' }}>Back</button>
-                            <button onClick={nextStep} disabled={!username} style={{ flex: 1, background: username ? '#00FFCC' : '#444', color: '#000', padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>Next</button>
+                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>Choose a Username</h3>
+                        <input value={username} onChange={e => setUsername(e.target.value)} placeholder="@username" style={inputStyle} />
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <button onClick={prevStep} style={{ flex: 1, background: 'transparent', color: '#A1A1AA', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Back</button>
+                            <button onClick={nextStep} disabled={!username} style={{ flex: 1, background: username ? '#00FFCC' : '#27272A', color: username ? '#000' : '#71717A', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Next</button>
                         </div>
                     </>
                 )}
 
                 {step === 4 && (
                     <>
-                        <h3 style={{ margin: 0 }}>Your ID</h3>
-                        <p style={{ fontSize: '12px', color: '#aaa', margin: '8px 0 0' }}>This is your unique Telegram ID.</p>
-                        <input value={id} disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                            <button onClick={prevStep} style={{ flex: 1, background: '#333', color: '#fff', padding: '10px', borderRadius: '8px', border: 'none' }}>Back</button>
-                            <button onClick={nextStep} disabled={!id} style={{ flex: 1, background: id ? '#00FFCC' : '#444', color: '#000', padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>Next</button>
+                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>Your ID</h3>
+                        <p style={{ fontSize: '13px', color: '#A1A1AA', margin: '8px 0 0' }}>Your unique Telegram identifier.</p>
+                        <input value={id} disabled style={{ ...inputStyle, opacity: 0.5, cursor: 'not-allowed' }} />
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <button onClick={prevStep} style={{ flex: 1, background: 'transparent', color: '#A1A1AA', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Back</button>
+                            <button onClick={nextStep} disabled={!id} style={{ flex: 1, background: id ? '#00FFCC' : '#27272A', color: id ? '#000' : '#71717A', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Next</button>
                         </div>
                     </>
                 )}
 
                 {step === 5 && (
                     <>
-                        <h3 style={{ margin: 0 }}>Profile Picture</h3>
-                        <div style={{ margin: '20px 0', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>Profile Picture</h3>
+                        <div style={{ margin: '24px 0', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
                             {avatar ? (
-                                <img src={avatar} alt="Avatar" style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
+                                <img src={avatar} alt="Avatar" style={{ width: '80px', height: '80px', borderRadius: '16px', objectFit: 'cover' }} />
                             ) : (
-                                <div style={{ display: 'flex', gap: '10px' }}>
+                                <div style={{ display: 'flex', gap: '12px' }}>
                                     {['https://api.dicebear.com/7.x/bottts/svg?seed=1', 'https://api.dicebear.com/7.x/bottts/svg?seed=2', 'https://api.dicebear.com/7.x/bottts/svg?seed=3'].map(url => (
-                                        <img key={url} src={url} onClick={() => setAvatar(url)} style={{ width: '50px', height: '50px', borderRadius: '50%', cursor: 'pointer', border: avatar === url ? '2px solid #00FFCC' : '2px solid transparent' }} />
+                                        <img key={url} src={url} onClick={() => setAvatar(url)} style={{ width: '56px', height: '56px', borderRadius: '12px', cursor: 'pointer', opacity: avatar === url ? 1 : 0.6, border: avatar === url ? '2px solid #00FFCC' : '2px solid transparent', transition: 'all 0.2s' }} />
                                     ))}
                                 </div>
                             )}
-                            <label style={{ cursor: 'pointer', color: '#00FFCC', fontSize: '14px', textDecoration: 'underline' }}>
-                                Or upload an image
+                            <label style={{ cursor: 'pointer', color: '#A1A1AA', fontSize: '14px', fontWeight: 500 }}>
+                                <span style={{ textDecoration: 'underline' }}>Upload an image</span>
                                 <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
                             </label>
                         </div>
-                        <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-                            <button onClick={prevStep} style={{ flex: 1, background: '#333', color: '#fff', padding: '10px', borderRadius: '8px', border: 'none' }}>Back</button>
-                            <button onClick={() => onComplete({ name, username, id, avatar })} disabled={!avatar} style={{ flex: 1, background: avatar ? '#00FFCC' : '#444', color: '#000', padding: '10px', borderRadius: '8px', border: 'none', fontWeight: 'bold' }}>Finish</button>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <button onClick={prevStep} style={{ flex: 1, background: 'transparent', color: '#A1A1AA', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Back</button>
+                            <button onClick={() => onComplete({ name, username, id, avatar })} disabled={!avatar} style={{ flex: 1, background: avatar ? '#00FFCC' : '#27272A', color: avatar ? '#000' : '#71717A', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Finish</button>
                         </div>
                     </>
                 )}
