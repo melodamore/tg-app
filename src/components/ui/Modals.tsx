@@ -99,8 +99,8 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
     const stepImages = [
         "https://i.ibb.co/39yh5dts/5886499923715362062.jpg", // Step 1: Welcome
         "https://i.ibb.co/fdgxq4RB/unnamed.jpg", // Step 2: Name
-        "https://api.dicebear.com/7.x/bottts/svg?seed=username&backgroundColor=18181B", // Step 3: Username
-        "https://api.dicebear.com/7.x/bottts/svg?seed=id&backgroundColor=18181B"  // Step 4: ID
+        "https://i.ibb.co/39Cn22yw/unnamed.jpg", // Step 3: Username
+        "https://i.ibb.co/nqGcwhnD/unnamed.jpg"  // Step 4: ID
     ];
 
     return (
@@ -127,7 +127,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                 
                 {step === 1 && (
                     <>
-                        <h2 style={{ margin: '0 0 8px 0', color: '#FFF', fontSize: '22px', fontWeight: 600 }}>PixelMint</h2>
+                        <h2 style={{ margin: '0 0 8px 0', color: '#FFF', fontSize: '22px', fontWeight: 600 }}>Hi, I am Pixie!</h2>
                         <p style={{ fontSize: '14px', color: '#A1A1AA', marginBottom: '32px', lineHeight: '1.5' }}>I'll be your guide. Let's set up your creator profile to get started.</p>
                         <button onClick={nextStep} style={{ width: '100%', background: '#00FFCC', color: '#000', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '15px' }}>Let's Go</button>
                     </>
@@ -136,6 +136,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                 {step === 2 && (
                     <>
                         <h3 style={{ margin: 0, fontWeight: 600, fontSize: '20px' }}>What's your name?</h3>
+                        <p style={{ fontSize: '14px', color: '#A1A1AA', marginBottom: '32px', lineHeight: '1.5' }}>Let's Get to know eachother. What shall I call you?</p>
                         <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Display name" style={inputStyle} />
                         <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
                             <button onClick={prevStep} style={{ flex: 1, background: 'transparent', color: '#A1A1AA', padding: '14px', borderRadius: '12px', border: 'none', fontWeight: 600 }}>Back</button>
