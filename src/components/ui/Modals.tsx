@@ -66,6 +66,10 @@ export function SaveModal({ modal, saveName, setSaveName, onClose, onSave }: Sav
 
 export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onComplete: (data: any) => void }) {
     const [step, setStep] = useState(1);
+    
+    // User Data State
+    const [tgUser, setTgUser] = useState<any>(null);
+    const [tgFullName, setTgFullName] = useState('');
     const [name, setName] = useState('');
     const [username, setUsername] = useState('');
     const [id, setId] = useState('');
@@ -84,9 +88,6 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
         "https://i.ibb.co/Jjz9m1V5/ID.png",           
         "https://i.ibb.co/5X7dGWDF/Profile.png"       
     ];
-
-    const tgUser = WebApp.initDataUnsafe?.user;
-    const tgFullName = tgUser ? `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() : '';
 
     // Mobile Keyboard Dismiss Detection
     useEffect(() => {
@@ -126,11 +127,45 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
         });
     }, [isOpen]);
 
+    // Robust User Data Extraction
     useEffect(() => {
-        if (tgUser) {
-            setUsername(tgUser.username || '');
-            // Convert ID to a shorter, unique base-36 string
-            setId(Number(tgUser.id).toString(36).toUpperCase());
+        let user = WebApp.initDataUnsafe?.user;
+
+        // Fallback 1: Native window object
+        if (!user && typeof window !== 'undefined') {
+            const winTg = (window as any).Telegram;
+            if (winTg?.WebApp?.initDataUnsafe?.user) {
+                user = winTg.WebApp.initDataUnsafe.user;
+            }
+        }
+
+        // Fallback 2: Manual Hash Parsing (Saves data payload if React boots too fast)
+        if (!user && window.location.hash.includes('tgWebAppData')) {
+            try {
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const tgWebAppData = hashParams.get('tgWebAppData');
+                if (tgWebAppData) {
+                    const dataParams = new URLSearchParams(tgWebAppData);
+                    const userStr = dataParams.get('user');
+                    if (userStr) {
+                        user = JSON.parse(decodeURIComponent(userStr));
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to manually parse tgWebAppData:", err);
+            }
+        }
+
+        if (user) {
+            setTgUser(user);
+            setTgFullName(`${user.first_name || ''} ${user.last_name || ''}`.trim());
+            setUsername(user.username || '');
+            if (user.id) {
+                setId(Number(user.id).toString(36).toUpperCase());
+            }
+        } else {
+            // Failsafe generation to prevent soft-locking if testing purely outside native menus
+            setId(Math.random().toString(36).substring(2, 10).toUpperCase());
         }
     }, []);
 
@@ -161,6 +196,11 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
     const primaryBtnStyle = { flex: 1, background: '#00FFCC', color: '#000', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '16px', boxShadow: '0 8px 24px rgba(0, 255, 204, 0.25)', transition: 'transform 0.1s' };
     const secondaryBtnStyle = { flex: 1, background: 'rgba(255, 255, 255, 0.1)', color: '#FFF', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: '16px' };
     const disabledBtnStyle = { ...primaryBtnStyle, background: '#27272A', color: '#71717A', boxShadow: 'none', cursor: 'not-allowed' };
+
+    const isTgUserLoaded = !!tgUser;
+    const hasTgUsername = !!tgUser?.username;
+    // We only hard-block if we successfully loaded the Telegram context BUT they lack a username
+    const blockUsernameInput = isTgUserLoaded && !hasTgUsername;
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#000000', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadein 0.4s ease-out' }}>
@@ -216,15 +256,15 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                             <h3 style={{ margin: '0 0 8px', fontWeight: 700, fontSize: '26px' }}>Choose a Username</h3>
                             <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>So <span style={{ color: '#00FFCC', fontWeight: 600 }}>{name}</span>, this is how friends will find you.</p>
                             
-                            {!tgUser?.username && (
-                                <p style={{ color: '#EF4444', fontSize: '14px', margin: '8px 0 0' }}>⚠️ A Telegram username is required to use this app. Please set one in your Telegram settings.</p>
+                            {blockUsernameInput && (
+                                <p style={{ color: '#EF4444', fontSize: '14px', margin: '8px 0 0' }}>⚠️ A Telegram username is required to use this app. Please set one in your Telegram settings and reload.</p>
                             )}
 
-                            <input value={username} onChange={e => setUsername(e.target.value)} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} placeholder="@username" style={inputStyle} disabled={!tgUser?.username} />
+                            <input value={username} onChange={e => setUsername(e.target.value)} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} placeholder="@username" style={inputStyle} disabled={blockUsernameInput} />
                             
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button onClick={prevStep} style={secondaryBtnStyle}>Back</button>
-                                <button onClick={nextStep} disabled={!username || !tgUser?.username} style={(username && tgUser?.username) ? primaryBtnStyle : disabledBtnStyle}>Next</button>
+                                <button onClick={nextStep} disabled={!username || blockUsernameInput} style={(username && !blockUsernameInput) ? primaryBtnStyle : disabledBtnStyle}>Next</button>
                             </div>
                         </>
                     )}
