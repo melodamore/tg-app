@@ -204,9 +204,8 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#000000', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadein 0.4s ease-out' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '70%', background: '#000', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', filter: isFocused ? 'brightness(0.4)' : 'brightness(1)', transition: 'filter 0.3s ease-out' }}>
-                <div style={{ position: 'absolute', width: '280px', height: '280px', background: 'radial-gradient(circle, rgba(0, 255, 204, 0.45) 0%, rgba(0, 0, 0, 0) 70%)', borderRadius: '50%', top: '45%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1 }} />
-                <img src={stepImages[step - 1]} alt="Character guide Pixie" style={{ width: '300px', height: '300px', objectFit: 'contain', zIndex: 2, filter: 'contrast(1.15) brightness(0.95) saturate(1.1) drop-shadow(0 0 12px rgba(0, 255, 204, 0.3))', transition: 'opacity 0.3s ease-out' }} />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '70%', background: '#000', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', filter: isFocused ? 'blur(8px) brightness(0.4)' : 'brightness(1)', transition: 'filter 0.3s ease-out' }}>
+                <img src={stepImages[step - 1]} alt="Character guide Pixie" style={{ width: '300px', height: '300px', objectFit: 'contain', zIndex: 2, filter: 'contrast(1.15) brightness(0.95) saturate(1.1)', transition: 'opacity 0.3s ease-out' }} />
             </div>
 
             <div style={{ position: 'relative', zIndex: 2, marginTop: 'auto', padding: '40px 24px 48px', display: 'flex', flexDirection: 'column', animation: 'swipeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
@@ -235,7 +234,11 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                                         checked={useTelegramName} 
                                         onChange={(e) => {
                                             setUseTelegramName(e.target.checked);
-                                            if (e.target.checked) setName(tgFullName);
+                                            if (e.target.checked) {
+                                                setName(tgFullName);
+                                            } else {
+                                                setName('');
+                                            }
                                         }} 
                                         style={{ accentColor: '#00FFCC' }}
                                     />
@@ -260,7 +263,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                                 <p style={{ color: '#EF4444', fontSize: '14px', margin: '8px 0 0' }}>⚠️ A Telegram username is required to use this app. Please set one in your Telegram settings and reload.</p>
                             )}
 
-                            <input value={username} onChange={e => setUsername(e.target.value)} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} placeholder="@username" style={inputStyle} disabled={blockUsernameInput} />
+                            <input value={username} onChange={e => setUsername(e.target.value)} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} placeholder="@username" style={inputStyle} disabled={blockUsernameInput || hasTgUsername} />
                             
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button onClick={prevStep} style={secondaryBtnStyle}>Back</button>
