@@ -71,7 +71,8 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
     const [id, setId] = useState('');
     const [avatar, setAvatar] = useState<string | null>(null);
     
-    // Preloader states
+    // Focus & Preloader states
+    const [isFocused, setIsFocused] = useState(false);
     const [imagesLoaded, setImagesLoaded] = useState(false);
     const [loadProgress, setLoadProgress] = useState(0);
 
@@ -158,7 +159,8 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
         color: '#FFF', padding: '18px 20px', 
         borderRadius: '16px', margin: '16px 0 32px', 
         outline: 'none', fontSize: '16px',
-        backdropFilter: 'blur(12px)'
+        backdropFilter: 'blur(12px)',
+        transition: 'border-color 0.2s ease'
     };
 
     const primaryBtnStyle = { 
@@ -185,7 +187,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#000000', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadein 0.4s ease-out' }}>
             
-            {/* Big Character Image with Gradient Mask and Stable Glow Effect */}
+            {/* Big Character Image with Blur on Focus */}
             <div style={{
                 position: 'absolute', top: 0, left: 0, right: 0, height: '70%',
                 background: '#000', 
@@ -193,9 +195,10 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                 maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)',
                 zIndex: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                filter: isFocused ? 'blur(12px) brightness(0.4)' : 'blur(0px) brightness(1)',
+                transition: 'filter 0.3s ease-out'
             }}>
-                {/* Stable, uniform background glow - INCREASED INTENSITY */}
                 <div style={{
                     position: 'absolute',
                     width: '280px', height: '280px',
@@ -206,18 +209,16 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                     zIndex: 1
                 }} />
                 
-                {/* Enforced uniform image size & Lighting normalization */}
                 <img src={stepImages[step - 1]} alt="Character guide Pixie" style={{
                     width: '300px', height: '300px',
                     objectFit: 'contain', 
                     zIndex: 2,
-                    // Stabilize lighting via CSS filter and add edge glow directly to character
                     filter: 'contrast(1.15) brightness(0.95) saturate(1.1) drop-shadow(0 0 12px rgba(0, 255, 204, 0.3))',
                     transition: 'opacity 0.3s ease-out'
                 }} />
             </div>
 
-            {/* Content Container (Pushed to bottom, overlaps the fade) */}
+            {/* Content Container */}
             <div style={{ 
                 position: 'relative', zIndex: 2, marginTop: 'auto', 
                 padding: '40px 24px 48px', display: 'flex', flexDirection: 'column',
@@ -250,7 +251,15 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                         <>
                             <h3 style={{ margin: '0 0 8px', fontWeight: 700, fontSize: '26px' }}>What's your name?</h3>
                             <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>Let's get to know each other.</p>
-                            <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Display name" style={inputStyle} />
+                            {/* Removed autoFocus, added focus handlers */}
+                            <input 
+                                value={name} 
+                                onChange={e => setName(e.target.value)} 
+                                onFocus={() => setIsFocused(true)}
+                                onBlur={() => setIsFocused(false)}
+                                placeholder="Display name" 
+                                style={inputStyle} 
+                            />
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button onClick={prevStep} style={secondaryBtnStyle}>Back</button>
                                 <button onClick={nextStep} disabled={!name} style={name ? primaryBtnStyle : disabledBtnStyle}>Next</button>
@@ -262,7 +271,15 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                         <>
                             <h3 style={{ margin: '0 0 8px', fontWeight: 700, fontSize: '26px' }}>Choose a Username</h3>
                             <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>This is how friends will find you.</p>
-                            <input value={username} onChange={e => setUsername(e.target.value)} placeholder="@username" style={inputStyle} />
+                            {/* Removed autoFocus, added focus handlers */}
+                            <input 
+                                value={username} 
+                                onChange={e => setUsername(e.target.value)} 
+                                onFocus={() => setIsFocused(true)}
+                                onBlur={() => setIsFocused(false)}
+                                placeholder="@username" 
+                                style={inputStyle} 
+                            />
                             <div style={{ display: 'flex', gap: '12px' }}>
                                 <button onClick={prevStep} style={secondaryBtnStyle}>Back</button>
                                 <button onClick={nextStep} disabled={!username} style={username ? primaryBtnStyle : disabledBtnStyle}>Next</button>
