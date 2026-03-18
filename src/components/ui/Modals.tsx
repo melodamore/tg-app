@@ -223,7 +223,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100000, background: '#000000', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'fadein 0.4s ease-out' }}>
             
-            {/* Big Character Image with Blur on Focus */}
+            {/* Big Character Image */}
             <div style={{
                 position: 'absolute', top: 0, left: 0, right: 0, height: '70%',
                 background: '#000', 
@@ -232,7 +232,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                 zIndex: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 overflow: 'hidden',
-                filter: isFocused ? 'blur(12px) brightness(0.4)' : 'blur(0px) brightness(1)',
+                filter: isFocused ? 'brightness(0.4)' : 'brightness(1)',
                 transition: 'filter 0.3s ease-out'
             }}>
                 <div style={{
@@ -305,7 +305,9 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                     {step === 3 && (
                         <>
                             <h3 style={{ margin: '0 0 8px', fontWeight: 700, fontSize: '26px' }}>Choose a Username</h3>
-                            <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>So {name}, this is how friends will find you.</p>
+                            <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>
+                                So <span style={{ color: '#00FFCC', fontWeight: 600 }}>{name}</span>, this is how friends will find you.
+                            </p>
                             <input 
                                 value={username} 
                                 onChange={e => setUsername(e.target.value)} 
