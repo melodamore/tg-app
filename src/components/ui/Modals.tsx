@@ -84,6 +84,42 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
         "https://i.ibb.co/5X7dGWDF/Profile.png"       
     ];
 
+    // Mobile Keyboard Dismiss Detection
+    useEffect(() => {
+        if (!isOpen) return;
+        
+        let maxHeight = window.innerHeight;
+
+        const handleResize = () => {
+            const currentHeight = window.innerHeight;
+            if (currentHeight > maxHeight) maxHeight = currentHeight;
+            
+            // If the viewport height returns close to its max height, the keyboard closed
+            if (currentHeight >= maxHeight - 50) {
+                if (document.activeElement instanceof HTMLInputElement) {
+                    document.activeElement.blur(); 
+                }
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.visualViewport?.addEventListener('resize', handleResize);
+        
+        // Safety check for WebApp event listener
+        if (WebApp && typeof WebApp.onEvent === 'function') {
+            WebApp.onEvent('viewportChanged', handleResize);
+        }
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.visualViewport?.removeEventListener('resize', handleResize);
+            
+            if (WebApp && typeof WebApp.offEvent === 'function') {
+                WebApp.offEvent('viewportChanged', handleResize);
+            }
+        };
+    }, [isOpen]);
+
     // Preload images logic
     useEffect(() => {
         if (!isOpen) return;
@@ -251,7 +287,6 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                         <>
                             <h3 style={{ margin: '0 0 8px', fontWeight: 700, fontSize: '26px' }}>What's your name?</h3>
                             <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>Let's get to know each other.</p>
-                            {/* Removed autoFocus, added focus handlers */}
                             <input 
                                 value={name} 
                                 onChange={e => setName(e.target.value)} 
@@ -270,8 +305,7 @@ export function OnboardingModal({ isOpen, onComplete }: { isOpen: boolean, onCom
                     {step === 3 && (
                         <>
                             <h3 style={{ margin: '0 0 8px', fontWeight: 700, fontSize: '26px' }}>Choose a Username</h3>
-                            <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>This is how friends will find you.</p>
-                            {/* Removed autoFocus, added focus handlers */}
+                            <p style={{ fontSize: '15px', color: '#A1A1AA', margin: '0 0 8px' }}>So {name}, this is how friends will find you.</p>
                             <input 
                                 value={username} 
                                 onChange={e => setUsername(e.target.value)} 
